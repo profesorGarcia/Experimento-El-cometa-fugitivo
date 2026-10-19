@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>Experimento 01 · Encuentro gravitatorio</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101d30;--panel2:#0b1728;--line:#263951;--text:#edf5ff;--muted:#9bb0c9;--blue:#65c8ff;--gold:#ffb84d;--pink:#ff83bd;--green:#80e4b2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#163459 0%,var(--bg) 55%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:auto;padding:20px 14px 36px}.eyebrow{color:var(--blue);font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:.75rem}
+h1{font-size:clamp(1.65rem,5vw,2.8rem);line-height:1.08;margin:.35rem 0 .7rem}h2{font-size:1.08rem;margin:0 0 12px}p{margin:.4rem 0;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.85fr);gap:14px;margin-top:18px}
+.panel{background:linear-gradient(155deg,#13243a,#0b1728);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 12px 32px #0002}
+.canvas-wrap{position:relative;border-radius:12px;overflow:hidden;background:#050c18;border:1px solid #21334b}
+canvas{display:block;width:100%;height:auto;aspect-ratio:1.25;touch-action:manipulation}
+.legend{display:flex;flex-wrap:wrap;gap:10px 15px;font-size:.8rem;color:var(--muted);margin-top:10px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.controls{display:grid;gap:13px}.control{padding-bottom:12px;border-bottom:1px solid #203149}.control:last-child{border:0;padding:0}
+.control-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.control label{font-weight:650}.value{font-variant-numeric:tabular-nums;color:var(--blue);font-weight:800;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);margin:10px 0 2px}small,.hint{font-size:.78rem;color:var(--muted)}
+.buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}button{border:1px solid #35506f;border-radius:10px;background:#172b44;color:var(--text);font:inherit;font-weight:700;padding:10px 12px;cursor:pointer}button.primary{background:#176a91;border-color:#319ac7}button:hover{filter:brightness(1.15)}button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}.metric{background:#081525;border:1px solid #203149;border-radius:11px;padding:10px}.metric span{display:block;font-size:.74rem;color:var(--muted)}.metric strong{font-size:1.05rem;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.status{border-radius:10px;padding:10px 12px;background:#0a2232;border:1px solid #23516a;color:#bdeaff;margin-top:12px;font-size:.88rem}
+.equations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.eq{background:#081525;border-radius:10px;padding:10px;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.step{border:1px solid var(--line);background:#0b1728;border-radius:12px;padding:12px}.step b{display:block;margin-bottom:4px}.footer{font-size:.78rem;margin-top:16px}
+@media(max-width:780px){main{padding:16px 10px 28px}.layout{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.panel{padding:12px}canvas{aspect-ratio:1.05}}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Laboratorio de mecánica celeste · 01</div>
+  <h1>El encuentro gravitatorio ☄️</h1>
+  <p>La canica ya está orbitando. Un asteroide se aproxima y su gravedad altera el movimiento: explora cómo influyen la distancia, la velocidad y la dirección del encuentro.</p>
+  <div class="layout">
+    <section class="panel">
+      <h2>Vista del sistema</h2>
+      <div class="canvas-wrap"><canvas id="scene" width="900" height="720" aria-label="Simulación de la canica orbitando un cuerpo central y un asteroide que se aproxima"></canvas></div>
+      <div class="legend">
+        <span><i class="dot" style="background:#ffb84d"></i>Cuerpo central</span>
+        <span><i class="dot" style="background:#65c8ff"></i>Canica en órbita</span>
+        <span><i class="dot" style="background:#ff83bd"></i>Asteroide</span>
+        <span>— Trayectorias</span>
+      </div>
+      <div class="buttons">
+        <button class="primary" id="play">▶ Iniciar</button>
+        <button id="pause">Ⅱ Pausar</button>
+        <button id="reset">↺ Reiniciar encuentro</button>
+      </div>
+      <div class="buttons">
+        <button id="presetNear">Encuentro cercano</button>
+        <button id="presetFast">Asteroide rápido</button>
+        <button id="presetFar">Paso lejano</button>
+      </div>
+      <div class="readouts">
+        <div class="metric"><span>Distancia canica–asteroide</span><strong id="distance">—</strong></div>
+        <div class="metric"><span>Velocidad de la canica</span><strong id="marbleSpeed">—</strong></div>
+        <div class="metric"><span>Energía orbital específica*</span><strong id="energy">—</strong></div>
+        <div class="metric"><span>Estado orbital aproximado</span><strong id="orbitType">—</strong></div>
+      </div>
+      <div class="status" id="status" role="status">Pulsa «Iniciar» para observar cómo el asteroide perturba la órbita.</div>
+    </section>
+    <aside class="panel">
+      <h2>Configura el encuentro</h2>
+      <div class="controls">
+        <div class="control">
+          <div class="control-head"><label for="asteroidMass">Masa del asteroide</label><span class="value" id="asteroidMassOut">0.08</span></div>
+          <input id="asteroidMass" type="range" min="0.01" max="0.30" step="0.01" value="0.08">
+          <small>Más masa → mayor perturbación gravitatoria.</small>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="missDistance">Distancia de paso</label><span class="value" id="missDistanceOut">1.00</span></div>
+          <input id="missDistance" type="range" min="0.35" max="2.50" step="0.05" value="1.00">
+          <small>Menor distancia suele producir un encuentro más intenso.</small>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="asteroidSpeed">Velocidad del asteroide</label><span class="value" id="asteroidSpeedOut">1.80</span></div>
+          <input id="asteroidSpeed" type="range" min="0.50" max="4.00" step="0.10" value="1.80">
+          <small>Un paso rápido y uno lento no producen la misma desviación.</small>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="approachAngle">Ángulo de aproximación</label><span class="value" id="approachAngleOut">25°</span></div>
+          <input id="approachAngle" type="range" min="-70" max="70" step="5" value="25">
+          <small>Cambia el lado y la geometría del encuentro.</small>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="marbleSpeedInput">Velocidad inicial de la canica</label><span class="value" id="marbleSpeedInputOut">1.00</span></div>
+          <input id="marbleSpeedInput" type="range" min="0.65" max="1.35" step="0.05" value="1.00">
+          <small>La referencia 1.00 corresponde a la velocidad circular inicial.</small>
+        </div>
+      </div>
+      <div class="equations">
+        <div class="eq">F = Gm₁m₂/r²</div>
+        <div class="eq">ε = v²/2 − GM/r</div>
+      </div>
+      <p class="hint">*La energía orbital específica se calcula respecto al cuerpo central; durante el encuentro ya no es constante porque el asteroide también ejerce gravedad.</p>
+    </aside>
+  </div>
+  <section class="panel" style="margin-top:14px">
+    <h2>Tu misión científica</h2>
+    <div class="steps">
+      <div class="step"><b>01 · Predice</b><p>¿Qué crees que pasará si el asteroide pasa más cerca de la canica?</p></div>
+      <div class="step"><b>02 · Experimenta</b><p>Cambia una sola variable cada vez. Compara el paso cercano, rápido y lejano.</p></div>
+      <div class="step"><b>03 · Explica</b><p>¿La canica ganó o perdió energía orbital? ¿Su trayectoria se volvió más abierta o más cerrada?</p></div>
+    </div>
+    <p class="footer">Modelo newtoniano simplificado en unidades normalizadas. El cuerpo central permanece fijo; la canica y el asteroide se atraen gravitatoriamente entre sí y ambos sienten la gravedad central. Las colisiones físicas, los demás planetas y los efectos relativistas no están incluidos.</p>
+  </section>
+</main>
+<script>
+(() => {
+'use strict';
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
+const controls = ['asteroidMass','missDistance','asteroidSpeed','approachAngle','marbleSpeedInput'];
+const initial = {asteroidMass:0.08,missDistance:1,asteroidSpeed:1.8,approachAngle:25,marbleSpeedInput:1};
+const G = 1, centralMass = 1, softening = 0.055, dt = 0.004;
+let state, running=false, lastFrame=0, accumulator=0, frameId=0, trailMarble=[], trailAsteroid=[], closest=Infinity, elapsed=0, encounterPassed=false;
+const fmt = (n,d=2) => Number.isFinite(n) ? n.toFixed(d) : '—';
+function readParams(){return Object.fromEntries(controls.map(id=>[id,Number($(id).value)]));}
+function syncLabels(){
+ const p=readParams();
+ $('asteroidMassOut').textContent=fmt(p.asteroidMass,2);
+ $('missDistanceOut').textContent=fmt(p.missDistance,2);
+ $('asteroidSpeedOut').textContent=fmt(p.asteroidSpeed,2);
+ $('approachAngleOut').textContent=`${p.approachAngle}°`;
+ $('marbleSpeedInputOut').textContent=fmt(p.marbleSpeedInput,2);
+}
+function reset(){
+ const p=readParams();
+ const r=3.0;
+ const vc=Math.sqrt(G*centralMass/r);
+ const marbleV=vc*p.marbleSpeedInput;
+ const angle=p.approachAngle*Math.PI/180;
+ // Asteroid starts to the left and crosses the marble's orbital region.
+ const startX=-4.5, startY=p.missDistance;
+ const vx=p.asteroidSpeed*Math.cos(angle), vy=p.asteroidSpeed*Math.sin(angle);
+ state={
+  marble:{x:r,y:0,vx:0,vy:marbleV,m:0.02},
+  asteroid:{x:startX,y:startY,vx:vx,vy:vy,m:p.asteroidMass},
+ };
+ trailMarble=[];trailAsteroid=[];closest=Infinity;elapsed=0;encounterPassed=false;accumulator=0;
+ $('status').textContent='Listo. La canica parte en órbita y el asteroide se aproxima desde la izquierda.';
+ updateReadouts(); draw();
+}
+function acceleration(body, other){
+ const rc=Math.hypot(body.x,body.y)||1e-6;
+ let ax=-G*centralMass*body.x/Math.pow(rc*rc+softening*softening,1.5);
+ let ay=-G*centralMass*body.y/Math.pow(rc*rc+softening*softening,1.5);
+ const dx=other.x-body.x,dy=other.y-body.y, d2=dx*dx+dy*dy+softening*softening;
+ const factor=G*other.m/Math.pow(d2,1.5);
+ ax+=factor*dx;ay+=factor*dy;
+ return {ax,ay};
+}
+// Velocity-Verlet integration for both moving bodies, including mutual gravity.
+function step(h){
+ const b=state.marble,a=state.asteroid;
+ const ab=acceleration(b,a), aa=acceleration(a,b);
+ b.x+=b.vx*h+0.5*ab.ax*h*h;b.y+=b.vy*h+0.5*ab.ay*h*h;
+ a.x+=a.vx*h+0.5*aa.ax*h*h;a.y+=a.vy*h+0.5*aa.ay*h*h;
+ const ab2=acceleration(b,a), aa2=acceleration(a,b);
+ b.vx+=0.5*(ab.ax+ab2.ax)*h;b.vy+=0.5*(ab.ay+ab2.ay)*h;
+ a.vx+=0.5*(aa.ax+aa2.ax)*h;a.vy+=0.5*(aa.ay+aa2.ay)*h;
+ elapsed+=h;
+ const d=Math.hypot(b.x-a.x,b.y-a.y);
+ if(d<closest)closest=d;
+ if(elapsed>1 && d>closest+0.5) encounterPassed=true;
+ if(elapsed>30 && !encounterPassed) encounterPassed=true;
+ if(Math.round(elapsed/(h*4)) !== Math.round((elapsed-h)/(h*4))){
+   trailMarble.push({x:b.x,y:b.y});trailAsteroid.push({x:a.x,y:a.y});
+   if(trailMarble.length>1800)trailMarble.shift();
+   if(trailAsteroid.length>1800)trailAsteroid.shift();
+ }
+}
+function updateReadouts(){
+ if(!state)return;
+ const b=state.marble,a=state.asteroid;
+ const r=Math.hypot(b.x,b.y),v=Math.hypot(b.vx,b.vy),d=Math.hypot(b.x-a.x,b.y-a.y);
+ const eps=v*v/2-G*centralMass/Math.max(r,1e-6);
+ $('distance').textContent=fmt(d,3)+' u';
+ $('marbleSpeed').textContent=fmt(v,3)+' u/t';
+ $('energy').textContent=(eps>=0?'+':'')+fmt(eps,4);
+ $('orbitType').textContent=eps< -0.015?'Ligada (elíptica aprox.)':eps>0.015?'No ligada (escape aprox.)':'Casi circular / límite';
+ if(encounterPassed){
+  $('status').textContent=`Encuentro pasado. Distancia mínima: ${fmt(closest,3)} u. Observa la nueva trayectoria y cambia un parámetro para comparar.`;
+ }else if(elapsed>0.05){
+  $('status').textContent=`Encuentro en evolución · tiempo ${fmt(elapsed,1)}. Distancia mínima registrada: ${fmt(closest,3)} u.`;
+ }
+}
+function worldToScreen(x,y,scale,cx,cy){return {x:cx+x*scale,y:cy-y*scale};}
+function drawTrail(points,color,scale,cx,cy){
+ if(points.length<2)return;
+ ctx.beginPath();points.forEach((p,i)=>{const s=worldToScreen(p.x,p.y,scale,cx,cy);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});
+ ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+}
+function arrow(x1,y1,x2,y2,color,label){
+ ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+ const a=Math.atan2(y2-y1,x2-x1),len=8;
+ ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-len*Math.cos(a-0.45),y2-len*Math.sin(a-0.45));ctx.lineTo(x2-len*Math.cos(a+0.45),y2-len*Math.sin(a+0.45));ctx.closePath();ctx.fill();
+ if(label){ctx.font='bold 15px system-ui';ctx.fillText(label,x2+6,y2-6);}
+}
+function draw(){
+ const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
+ const grad=ctx.createRadialGradient(w*.5,h*.5,10,w*.5,h*.5,w*.7);grad.addColorStop(0,'#0d1e33');grad.addColorStop(1,'#030812');ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+ // stars
+ for(let i=0;i<75;i++){const x=(i*127+31)%w,y=(i*211+17)%h;ctx.fillStyle=`rgba(190,220,255,${0.15+((i%5)*0.1)})`;ctx.fillRect(x,y,2,2);}
+ const scale=Math.min(w/10.8,h/8.6),cx=w*.52,cy=h*.52;
+ // central gravity influence rings
+ for(let rr of [1.5,3,4.5]){ctx.beginPath();ctx.arc(cx,cy,rr*scale,0,Math.PI*2);ctx.strokeStyle='rgba(130,170,210,.13)';ctx.setLineDash([4,7]);ctx.stroke();}ctx.setLineDash([]);
+ drawTrail(trailMarble,'rgba(101,200,255,.75)',scale,cx,cy);
+ drawTrail(trailAsteroid,'rgba(255,131,189,.65)',scale,cx,cy);
+ // initial circular orbit reference
+ ctx.beginPath();ctx.arc(cx,cy,3*scale,0,Math.PI*2);ctx.strokeStyle='rgba(101,200,255,.22)';ctx.setLineDash([7,8]);ctx.stroke();ctx.setLineDash([]);
+ // central body glow
+ const glow=ctx.createRadialGradient(cx,cy,3,cx,cy,42);glow.addColorStop(0,'#fff1b0');glow.addColorStop(.28,'#ffb84d');glow.addColorStop(1,'rgba(255,125,40,0)');
+ ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx,cy,42,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#ffb84d';ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#fff3ce';ctx.beginPath();ctx.arc(cx-4,cy-4,4,0,Math.PI*2);ctx.fill();
+ const b=state.marble,a=state.asteroid,bs=worldToScreen(b.x,b.y,scale,cx,cy),as=worldToScreen(a.x,a.y,scale,cx,cy);
+ // comet/asteroid streak
+ const av=Math.atan2(-a.vy,a.vx),tail=25;
+ ctx.strokeStyle='rgba(255,131,189,.65)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(as.x-tail*Math.cos(av),as.y-tail*Math.sin(av));ctx.lineTo(as.x,as.y);ctx.stroke();
+ const ag=ctx.createRadialGradient(as.x,as.y,1,as.x,as.y,22);ag.addColorStop(0,'#fff');ag.addColorStop(.25,'#ff83bd');ag.addColorStop(1,'rgba(255,131,189,0)');
+ ctx.fillStyle=ag;ctx.beginPath();ctx.arc(as.x,as.y,22,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#ff9dca';ctx.beginPath();ctx.arc(as.x,as.y,7,0,Math.PI*2);ctx.fill();
+ // marble
+ const mg=ctx.createRadialGradient(bs.x-3,bs.y-3,1,bs.x,bs.y,15);mg.addColorStop(0,'#fff');mg.addColorStop(.3,'#65c8ff');mg.addColorStop(1,'rgba(101,200,255,0)');
+ ctx.fillStyle=mg;ctx.beginPath();ctx.arc(bs.x,bs.y,15,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#d8f4ff';ctx.beginPath();ctx.arc(bs.x,bs.y,5,0,Math.PI*2);ctx.fill();
+ // vectors
+ const bvScale=18, ba=acceleration(b,a), vecClamp=(v)=>Math.max(-1.7,Math.min(1.7,v));
+ arrow(bs.x,bs.y,bs.x+vecClamp(b.vx)*bvScale,bs.y-vecClamp(b.vy)*bvScale,'#65c8ff','v');
+ arrow(bs.x,bs.y,bs.x+vecClamp(ba.ax)*28,bs.y-vecClamp(ba.ay)*28,'#80e4b2','a');
+ ctx.font='bold 16px system-ui';ctx.fillStyle='#d8f4ff';ctx.fillText('CANICA',bs.x+13,bs.y+23);
+ ctx.fillStyle='#ffd4e7';ctx.fillText('ASTEROIDE',as.x+12,as.y+25);
+ ctx.fillStyle='rgba(220,235,255,.75)';ctx.font='13px system-ui';ctx.fillText('Cuerpo central',cx+18,cy-18);
+}
+function animate(ts){
+ if(!running)return;
+ if(!lastFrame)lastFrame=ts;
+ const realDelta=Math.min((ts-lastFrame)/1000,0.04);lastFrame=ts;
+ accumulator+=realDelta*1.4;
+ let steps=0;
+ while(accumulator>=dt && steps<100){step(dt);accumulator-=dt;steps++;}
+ updateReadouts();draw();
+ if(elapsed>70){running=false;$('status').textContent='Simulación detenida tras 70 unidades de tiempo. Reinicia para probar otro encuentro.';}
+ if(running)frameId=requestAnimationFrame(animate);
+}
+function play(){if(running)return;running=true;lastFrame=0;frameId=requestAnimationFrame(animate);}
+function pause(){running=false;if(frameId)cancelAnimationFrame(frameId);lastFrame=0;}
+controls.forEach(id=>$(id).addEventListener('input',()=>{syncLabels();if(!running)reset();}));
+$('play').addEventListener('click',play);
+$('pause').addEventListener('click',pause);
+$('reset').addEventListener('click',()=>{pause();reset();});
+$('presetNear').addEventListener('click',()=>{pause();$('missDistance').value='0.4';$('asteroidMass').value='0.15';$('asteroidSpeed').value='1.5';syncLabels();reset();});
+$('presetFast').addEventListener('click',()=>{pause();$('missDistance').value='0.7';$('asteroidSpeed').value='3.5';$('approachAngle').value='10';syncLabels();reset();});
+$('presetFar').addEventListener('click',()=>{pause();$('missDistance').value='2.2';$('asteroidMass').value='0.08';syncLabels();reset();});
+syncLabels();reset();
+})();
+</script>
+</body>
+</html>
